@@ -3,6 +3,8 @@
 
 #include "Earth.h"
 #include "DrawDebugHelpers.h"
+#include "NiagaraComponent.h"
+#include "NiagaraDataInterfaceArrayFunctionLibrary.h"
 
 // Sets default values
 AEarth::AEarth()
@@ -17,6 +19,18 @@ void AEarth::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	auto components = GetComponents();
+	for (auto& component : components)
+	{
+		if (component->GetName() == "NiagaraBuildings")
+		{
+			buildingVisualizer = Cast<UNiagaraComponent>(component);
+		}
+	}
+
+	ensure(buildingVisualizer);
+
+	RenderBuildings();
 }
 
 // Called every frame
@@ -323,5 +337,103 @@ void AEarth::DebugDrawSpatialIndex(double time) const
 {
 	DebugDrawQuadTreeNode(nodeSpatialIndex.Get(), time);
 }
+
+void AEarth::GetBuildingRenderParameters(const FOsmWay& building, FVector& location, FQuat& rotation, FVector& scale)
+{
+	int64 nodeId0 = building.nodeIds[0];
+	const FOsmNode& node0 = osmNodes[nodeId0];
+	double latSum = node0.lat;
+	double lonSum = node0.lon;
+
+	double 
+		latMin = node0.lat,
+		lonMin = node0.lon,
+		latMax = node0.lat,
+		lonMax = node0.lon;
+
+	for (int i = 1; i < building.nodeIds.Num(); i++)
+	{
+		int64 nodeId = building.nodeIds[i];
+		const FOsmNode& node = osmNodes[nodeId];
+		latSum += node.lat;
+		lonSum += node.lon;
+
+		if (node.lat < latMin)
+		{
+			latMin = node.lat;
+		}
+		else if (node.lat > latMax)
+		{
+			latMax = node.lat;
+		}
+
+		if (node.lon < lonMin)
+		{
+			lonMin = node.lon;
+		}
+		else if (node.lon > lonMax)
+		{
+			lonMax = node.lon;
+		}
+	}
+
+	double latCenter = latSum / building.nodeIds.Num();
+	double lonCenter = lonSum / building.nodeIds.Num();
+
+	location = LatLonToWorldSpace(FVector2D(latCenter, lonCenter));
+
+	if (FMath::RandRange(0.0, 1.0) > 0.9)
+	{
+		DrawDebugLine(GetWorld(), GetActorLocation(), location, FColor::Blue, true);
+	}
+	
+	FRotator rotator(latCenter, lonCenter, 0);
+	rotation = FQuat::MakeFromRotator(rotator);
+
+	FVector minPoint = LatLonToWorldSpace(FVector2D(latMin, lonMin));
+	FVector maxPoint = LatLonToWorldSpace(FVector2D(latMax, lonMax));
+	double height = FMath::Abs(maxPoint.Y - minPoint.Y);
+	double width = FMath::Abs(maxPoint.X - minPoint.X);
+	scale.X = width * 0.01f;
+	scale.Y = height * 0.01f;
+
+	// TODO Scale by building height
+	scale.Z = (width + height) / 2.0 * 0.01f;
+}
+
+
+void AEarth::RenderBuildings()
+{
+	if (!buildingVisualizer)
+	{
+		return;
+	}
+
+	// TODO Draw only visible buildings
+
+	TArray<FVector> locations;
+	TArray<FVector> scales;
+	TArray<FQuat> rotations;
+	for (const auto& wayTuple : osmWays)
+	{
+		const FOsmWay& way = wayTuple.Value;
+		if (!way.tags.Contains("building"))
+		{
+			continue;
+		}
+		FVector location;
+		FQuat rotation;
+		FVector scale;
+		GetBuildingRenderParameters(way, location, rotation, scale);
+		locations.Add(location);
+		rotations.Add(rotation);
+		scales.Add(scale);
+		//scales.Add(FVector(0.1f, 0.1f, 0.1f));
+	}
+	UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(buildingVisualizer, "TransformLocations", locations); UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(buildingVisualizer, "TransformLocations", locations);
+	UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayQuat(buildingVisualizer, "TransformRotations", rotations);
+	UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(buildingVisualizer, "TransformScales", scales);
+}
+
 
 

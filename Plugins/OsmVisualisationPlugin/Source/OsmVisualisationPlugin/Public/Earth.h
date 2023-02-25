@@ -12,6 +12,8 @@
 #include "QuadTree.h"
 #include "Earth.generated.h"
 
+class UNiagaraComponent;
+
 UCLASS()
 class OSMVISUALISATIONPLUGIN_API AEarth : public AActor
 {
@@ -24,14 +26,17 @@ private:
 	UPROPERTY(EditAnywhere)
 	double planetVisualRadius = 10000.0;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY()
 	TMap<int64, FOsmNode> osmNodes;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY()
 	TMap<int64, FOsmWay> osmWays;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY()
 	TMap<int64, FOsmRelation> osmRelations;
+
+	UPROPERTY(Transient)
+	UNiagaraComponent* buildingVisualizer;
 
 	TUniquePtr<FQuadTree<int64>> nodeSpatialIndex;
 	
@@ -107,4 +112,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void DebugDrawSpatialIndex(double time) const;
+
+	UFUNCTION(BlueprintCallable)
+	void GetBuildingRenderParameters(const FOsmWay& building, FVector& location, FQuat& rotation, FVector& scale);
+
+	UFUNCTION(BlueprintCallable)
+	void RenderBuildings();
 };
