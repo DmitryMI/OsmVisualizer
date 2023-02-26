@@ -196,7 +196,6 @@ void UOsmUtilsLibrary::BuildEarthFromJsonFile(const UObject* WorldContextObject,
 
 void UOsmUtilsLibrary::BuildEarthFromJsonFilesPattern(const UObject* WorldContextObject, AEarth* earth, const FString& jsonFilesPattern, const FString& patternMatcher)
 {
-	// TODO Autodetect path separator
 	TArray<FString> matchingFiles = GetFilesMatchingPattern(jsonFilesPattern, patternMatcher);
 
 	for (const FString& file : matchingFiles)

@@ -384,7 +384,7 @@ void AEarth::GetBuildingRenderParameters(const FOsmWay& building, FVector& locat
 
 	if (FMath::RandRange(0.0, 1.0) > 0.9)
 	{
-		DrawDebugLine(GetWorld(), GetActorLocation(), location, FColor::Blue, true);
+		DrawDebugLine(GetWorld(), GetActorLocation(), location, FColor::Blue, false, 20.0f);
 	}
 	
 	FRotator rotator(latCenter, lonCenter, 0);
